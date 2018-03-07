@@ -1,0 +1,109 @@
+<link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+<div ng-app="app" style="padding: 12px;">
+<div ng-controller="ctrl">
+  <div>Select a cell in the Attendance tab to view its information. Set the values below to quickly and automatically update the spreadsheet.</div>
+  <div class="error" ng-show="data.noSelect">Please select one cell in the Attendance section.</div><br>
+  <fieldset>
+    <div>
+      <input type="radio" name="transport" id="none" ng-model="data.transport" value="none" ng-change="setTransport()" ng-disabled="data.noSelect">
+      <label for="none"><i>None</i></label>
+    </div>
+    <div>
+      <input type="radio" name="transport" id="sprinter" ng-model="data.transport" value="sprinter" ng-change="setTransport()" ng-disabled="data.noSelect">
+      <label for="sprinter">Riding on Sprinter</label>
+    </div>
+    <div>
+      <input type="radio" name="transport" id="driving" ng-model="data.transport" value="driving" ng-change="setTransport()" ng-disabled="data.noSelect">
+      <label for="driving">Driving on Own</label>
+    </div>
+    <div>
+      <input type="radio" name="transport" id="maybe" ng-model="data.transport" value="maybe" ng-change="setTransport()" ng-disabled="data.noSelect">
+      <label for="maybe">Maybe/Unsure</label>
+    </div>
+    <div>
+      <input type="radio" name="transport" id="notappd" ng-model="data.transport" value="notappd" ng-change="setTransport()" ng-disabled="data.noSelect">
+      <label for="notappd">Not Attending <span class="gray">(Not Approved)</span></label>
+    </div>
+    <div>
+      <input type="radio" name="transport" id="approved" ng-model="data.transport" value="approved" ng-change="setTransport()" ng-disabled="data.noSelect">
+      <label for="approved">Not Attending <span class="gray">(Approved)</span></label>
+    </div>
+    <div>
+      <input type="radio" name="transport" id="noshow" ng-model="data.transport" value="noshow" ng-change="setTransport()" ng-disabled="data.noSelect">
+      <label for="noshow">No Show</label>
+    </div><br>
+    <div class="form-group">
+      <label for="reason">Reason/Notes/Activity</label>
+      <input type="text" id="reason" ng-model="data.reason" style="width: 100%;" ng-change="setReason()" ng-disabled="data.noSelect">
+    </div>
+  </fieldset>
+  <fieldset>
+    <div class="inline" style="padding-top: 5px;">
+      <label for="reason">Score:</label>
+      <input type="text" id="score" ng-model="data.score" style="width: 100px;" ng-change="setScore()" ng-disabled="data.noSelect">
+    </div>
+    <div class="inline form-group">
+      <input type="checkbox" id="medalist" ng-model="data.medalist" ng-change="setMedalist()" ng-disabled="data.noSelect">
+      <label for="medalist">Medalist</label>
+    </div>
+  </fieldset>
+  <!--<fieldset>
+    <div>After rounds, click this button to save the attendance values before you enter in the scores.</div><br>
+    <button ng-disabled="noCache">Cache Attendance Value</button>
+  </fieldset>-->
+</div>
+</div>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.7/angular.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script>
+  var app=angular.module("app", []);
+  app.controller("ctrl", function($scope) {
+    $scope.data={};
+    $scope.setTransport=function() {
+      google.script.run.setTransport($scope.data.transport);
+    };
+    $scope.setReason=function() {
+      google.script.run.setReason($scope.data.reason);
+    };
+    $scope.setScore=function() {
+      google.script.run.setScore($scope.data.score);
+    };
+    $scope.setMedalist=function() {
+      google.script.run.setMedalist($scope.data.medalist);
+    };
+    $scope.setValues=function() {
+      if ($scope.data.noSelect) return;
+      var value=$scope.data.value.toString();
+      var index=value.indexOf("(");
+      if (value=="") $scope.data.transport="none";
+      else if (value.substring(0,1)=="D") $scope.data.transport="driving";
+      else if (value.substring(0,1)=="S") $scope.data.transport="sprinter";
+      else if (value.substring(0,1)=="M") $scope.data.transport="maybe";
+      else if (value.toLowerCase().indexOf("no show")!=-1) $scope.data.transport="noshow";
+      else if (value.substring(0,1)=="N" && $scope.data.weight=="bold") $scope.data.transport="approved";
+      else if (value.substring(0,1)=="N") $scope.data.transport="notappd";
+      else if (index!=-1) {
+        if (value.substring(index-1,index)==" ") $scope.data.score=value.substring(0,index-1);
+        else $scope.data.score=value.substring(0,index);
+        $scope.data.transport=undefined;
+      } else {
+        $scope.data.score=value;
+        $scope.data.transport=undefined;
+      }
+      if ($scope.data.color=="#01da00") $scope.data.medalist=true;
+      else $scope.data.medalist=false;
+      if (value.indexOf("(")!=-1) $scope.data.reason=value.substring(value.indexOf("(")+1,value.lastIndexOf(")"));
+    };
+    setInterval(function() {
+      if (!document.hidden) {
+        google.script.run.withSuccessHandler(function(data) {
+          if (data!=null) {
+            $scope.data=data;
+            $scope.setValues();
+            $scope.$apply();
+          }
+        }).getSelected($scope.data.lastRange);
+      }
+    }, 500);
+  });
+</script>
